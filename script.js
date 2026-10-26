@@ -1,4 +1,3 @@
-
 (() => {
   "use strict";
 
@@ -23,9 +22,12 @@
     return window.matchMedia("(max-width: 760px)").matches;
   }
 
+  function isMenuOpen() {
+    return menuButton?.getAttribute("aria-expanded") === "true";
+  }
+
   function closeMenu() {
-    nav?.classList.remove("open");
-    nav?.classList.remove("is-open");
+    nav?.classList.remove("open", "is-open");
 
     menuButton?.classList.remove("is-open");
     menuButton?.setAttribute("aria-expanded", "false");
@@ -33,7 +35,7 @@
   }
 
   function openMenu() {
-    nav?.classList.add("open");
+    nav?.classList.add("open", "is-open");
 
     menuButton?.classList.add("is-open");
     menuButton?.setAttribute("aria-expanded", "true");
@@ -43,13 +45,19 @@
     header?.classList.remove("nav-hidden");
   }
 
+  // Set a consistent initial state.
+  if (menuButton) {
+    menuButton.setAttribute("type", "button");
+    if (nav?.id) {
+      menuButton.setAttribute("aria-controls", nav.id);
+    }
+    closeMenu();
+  }
+
   menuButton?.addEventListener("click", (event) => {
     event.stopPropagation();
 
-    const isOpen =
-      menuButton.getAttribute("aria-expanded") === "true";
-
-    if (isOpen) {
+    if (isMenuOpen()) {
       closeMenu();
     } else {
       openMenu();
@@ -68,15 +76,28 @@
     if (
       nav &&
       header &&
+      isMenuOpen() &&
       !header.contains(event.target)
     ) {
       closeMenu();
     }
   });
 
-  // Escape closes the mobile menu.
+  // Escape closes the mobile menu and returns focus to the button.
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && isMenuOpen()) {
+      closeMenu();
+      menuButton?.focus();
+    }
+  });
+
+  // Close the menu when keyboard focus leaves the header.
+  header?.addEventListener("focusout", (event) => {
+    if (
+      isMenuOpen() &&
+      event.relatedTarget &&
+      !header.contains(event.relatedTarget)
+    ) {
       closeMenu();
     }
   });
@@ -96,7 +117,7 @@
     .map((link) => {
       const selector = link.getAttribute("href");
 
-      if (!selector?.startsWith("#")) {
+      if (!selector?.startsWith("#") || selector.length < 2) {
         return null;
       }
 
@@ -389,8 +410,7 @@
     function updateNavbar() {
       const currentScrollY = window.scrollY;
 
-      const menuOpen =
-        menuButton?.getAttribute("aria-expanded") === "true";
+      const menuOpen = isMenuOpen();
 
       if (currentScrollY <= topOffset || menuOpen) {
         header.classList.remove("nav-hidden");
